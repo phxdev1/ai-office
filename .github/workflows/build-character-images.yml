@@ -117,7 +117,7 @@ jobs:
   deploy-to-runpod:
     needs: build-character-images
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && secrets.RUNPOD_API_KEY
+    if: github.ref == 'refs/heads/main'
     
     strategy:
       matrix:
@@ -128,6 +128,7 @@ jobs:
       run: pip install runpod
 
     - name: Deploy ${{ matrix.character }} to RunPod
+      if: env.RUNPOD_API_KEY != ''
       env:
         RUNPOD_API_KEY: ${{ secrets.RUNPOD_API_KEY }}
       run: |
