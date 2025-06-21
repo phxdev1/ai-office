@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git clone:*)",
+      "Bash(python:*)",
+      "Bash(mkdir:*)",
+      "Bash(pip install:*)",
+      "Bash(pkill:*)",
+      "Bash(chmod:*)",
+      "Bash(./deploy_office_loras.sh:*)",
+      "Bash(runpod list:*)",
+      "Bash(runpod:*)",
+      "Bash(timeout 10 runpod pod create:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(source .env)",
+      "Bash(./manual_office_training.sh:*)",
+      "Bash(./pod_inventory.sh)",
+      "Bash(./check_training_status.sh:*)",
+      "Bash(./check_pod_training.sh:*)",
+      "Bash(./test_single_pod.sh:*)"
+    ],
+    "deny": []
+  }
+}
