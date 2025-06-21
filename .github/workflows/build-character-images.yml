@@ -1,0 +1,155 @@
+name: Build Character-Specific Docker Images
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  BASE_IMAGE: phxdev1/ai-office
+
+jobs:
+  build-character-images:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    
+    strategy:
+      matrix:
+        character: [michael, dwight, creed, erin, toby]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Create character-specific Dockerfile
+      run: |
+        cat > Dockerfile.${{ matrix.character }} << 'EOF'
+        FROM nvidia/cuda:12.9.1-devel-ubuntu20.04
+
+        # Set character at build time - NO ENV VARIABLES NEEDED!
+        ENV CHARACTER_NAME=${{ matrix.character }}
+        ENV DEBIAN_FRONTEND=noninteractive
+
+        # Install system dependencies
+        RUN apt-get update && apt-get install -y \
+            python3 \
+            python3-pip \
+            git \
+            wget \
+            curl \
+            && rm -rf /var/lib/apt/lists/*
+
+        # Upgrade pip
+        RUN python3 -m pip install --upgrade pip
+
+        # Install PyTorch with CUDA 12.1 support
+        RUN pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+
+        # Install ML dependencies
+        RUN pip3 install \
+            transformers \
+            datasets \
+            unsloth[cu121-torch240] \
+            trl \
+            accelerate \
+            bitsandbytes
+
+        # Set working directory
+        WORKDIR /workspace
+
+        # Clone the Office LoRA repository
+        RUN git clone https://github.com/phxdev1/ai-office.git
+
+        # Copy training data
+        COPY autotrain_data/ /workspace/autotrain_data/
+
+        # Create auto-start script with character baked in
+        RUN echo '#!/bin/bash\n\
+        echo "🎭 ${{ matrix.character|upper }} LORA TRAINING CONTAINER"\n\
+        echo "======================================"\n\
+        echo "Character: ${{ matrix.character }}"\n\
+        echo "Time: $(date)"\n\
+        echo "GPU: $(nvidia-smi --query-gpu=name --format=csv,noheader)"\n\
+        echo ""\n\
+        \n\
+        cd /workspace/ai-office\n\
+        \n\
+        echo "🚀 Starting ${{ matrix.character }} LoRA training..."\n\
+        echo "Training data: /workspace/autotrain_data/${{ matrix.character }}_autotrain.jsonl"\n\
+        echo ""\n\
+        \n\
+        python3 train_character_lora.py --character ${{ matrix.character }} 2>&1 | tee "/workspace/${{ matrix.character }}_training.log"\n\
+        \n\
+        echo ""\n\
+        echo "✅ ${{ matrix.character }} training completed at $(date)"\n\
+        echo "📁 Results in: /workspace/ai-office/lora_models/"\n\
+        ' > /workspace/start_training.sh
+
+        RUN chmod +x /workspace/start_training.sh
+
+        CMD ["/workspace/start_training.sh"]
+        EOF
+
+    - name: Build and push ${{ matrix.character }} image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: Dockerfile.${{ matrix.character }}
+        platforms: linux/amd64
+        push: true
+        tags: ${{ env.REGISTRY }}/${{ env.BASE_IMAGE }}:${{ matrix.character }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  deploy-to-runpod:
+    needs: build-character-images
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && secrets.RUNPOD_API_KEY
+    
+    strategy:
+      matrix:
+        character: [michael, dwight, creed, erin, toby]
+
+    steps:
+    - name: Install RunPod CLI
+      run: pip install runpod
+
+    - name: Deploy ${{ matrix.character }} to RunPod
+      env:
+        RUNPOD_API_KEY: ${{ secrets.RUNPOD_API_KEY }}
+      run: |
+        runpod config $RUNPOD_API_KEY
+        
+        echo "🎭 Deploying ${{ matrix.character }} with dedicated image..."
+        echo "📍 Image: ${{ env.REGISTRY }}/${{ env.BASE_IMAGE }}:${{ matrix.character }}"
+        
+        POD_OUTPUT=$(echo 'y' | runpod pod create "${{ matrix.character }}-lora-auto" \
+          --image "${{ env.REGISTRY }}/${{ env.BASE_IMAGE }}:${{ matrix.character }}" \
+          --gpu-type "RTX A6000" \
+          --gpu-count 1 \
+          --support-public-ip true 2>&1)
+        
+        echo "Pod output: $POD_OUTPUT"
+        
+        POD_ID=$(echo "$POD_OUTPUT" | grep -oE '[a-zA-Z0-9]{8,}' | tail -1)
+        
+        if [[ -n "$POD_ID" && "$POD_ID" != "Launching" ]]; then
+          echo "✅ ${{ matrix.character }} deployed: $POD_ID"
+          echo "🔥 Training starts automatically!"
+        else
+          echo "❌ Failed to deploy ${{ matrix.character }}"
+          exit 1
+        fi

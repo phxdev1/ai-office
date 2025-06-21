@@ -1,0 +1,57 @@
+# Ignore unnecessary files for Docker build
+.git
+.github
+.gitignore
+.env
+*.md
+README.md
+LICENSE
+
+# Ignore local development files
+.vscode
+.idea
+*.log
+*.tmp
+
+# Ignore deployment scripts (not needed in container)
+deploy_*.sh
+launch_*.sh
+manual_*.sh
+bulk_*.sh
+check_*.sh
+clean_*.sh
+redeploy_*.sh
+docker_build_push.sh
+deploy_docker_pods.sh
+
+# Ignore pod ID files
+*_pod_id.txt
+*_pods.txt
+
+# Ignore local builds
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Keep only essential files:
+# - Dockerfile
+# - train_character_lora.py  
+# - autotrain_data/
+# - Any other training dependencies

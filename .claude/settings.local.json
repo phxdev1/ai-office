@@ -18,7 +18,24 @@
       "Bash(./pod_inventory.sh)",
       "Bash(./check_training_status.sh:*)",
       "Bash(./check_pod_training.sh:*)",
-      "Bash(./test_single_pod.sh:*)"
+      "Bash(./test_single_pod.sh:*)",
+      "Bash(git pull:*)",
+      "Bash(git fetch:*)",
+      "Bash(./launch_remaining_characters.sh:*)",
+      "Bash(./launch_simple_characters.sh:*)",
+      "Bash(./bulk_setup_pods.sh)",
+      "Bash(./deploy_all_training.sh:*)",
+      "Bash(./manual_deploy_all.sh)",
+      "Bash(./deploy_startup_to_pods.sh)",
+      "Bash(./launch_remaining_four.sh)",
+      "Bash(./launch_a6000_army.sh:*)",
+      "Bash(./deploy_a6000_startup.sh:*)",
+      "Bash(./clean_a6000_deploy.sh:*)",
+      "Bash(./deploy_nvidia_cuda_image.sh:*)",
+      "Bash(./docker_build_push.sh:*)",
+      "Bash(docker push:*)",
+      "Bash(docker build:*)",
+      "Bash(rm:*)"
     ],
     "deny": []
   }
