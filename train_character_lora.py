@@ -69,24 +69,27 @@ def train_character_lora(character_name: str, data_file: str, output_dir: str):
     
     print(f"📈 Training dataset size: {len(dataset)} examples")
     
-    # Training arguments
+    # Training arguments - MAXIMUM POWER MODE 🔥
     training_args = TrainingArguments(
-        per_device_train_batch_size=2,
-        gradient_accumulation_steps=4,
-        warmup_steps=5,
-        max_steps=100,  # Quick training for testing
-        learning_rate=2e-4,
+        per_device_train_batch_size=8,  # Max batch size for RTX 3090
+        gradient_accumulation_steps=1,  # No accumulation, pure speed
+        warmup_steps=100,
+        num_train_epochs=12,  # 12 epochs for proper training
+        learning_rate=5e-4,  # Higher learning rate for faster convergence
         fp16=not torch.cuda.is_bf16_supported(),
         bf16=torch.cuda.is_bf16_supported(),
-        logging_steps=1,
-        optim="adamw_8bit",
+        logging_steps=10,
+        optim="adamw_torch_fused",  # Fused optimizer for speed
         weight_decay=0.01,
-        lr_scheduler_type="linear",
+        lr_scheduler_type="cosine",
         seed=3407,
         output_dir=f"{output_dir}/{character_name.lower()}_checkpoints",
-        save_strategy="steps",
-        save_steps=50,
+        save_strategy="epoch",
+        save_steps=500,
         remove_unused_columns=False,
+        dataloader_num_workers=8,  # Max CPU workers for data loading
+        tf32=True,  # Enable TF32 for Ampere GPUs
+        gradient_checkpointing=False,  # Disable for max speed
     )
     
     # Trainer
