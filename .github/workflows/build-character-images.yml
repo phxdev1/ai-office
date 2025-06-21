@@ -37,35 +37,30 @@ jobs:
     - name: Create character-specific Dockerfile
       run: |
         cat > Dockerfile.${{ matrix.character }} << 'EOF'
-        FROM nvidia/cuda:12.9.1-devel-ubuntu20.04
+        FROM nvidia/cuda:12.9.1-runtime-ubuntu20.04
 
         # Set character at build time - NO ENV VARIABLES NEEDED!
         ENV CHARACTER_NAME=${{ matrix.character }}
         ENV DEBIAN_FRONTEND=noninteractive
 
-        # Install system dependencies
+        # Install system dependencies and Python packages in one layer to save space
         RUN apt-get update && apt-get install -y \
             python3 \
             python3-pip \
             git \
-            wget \
-            curl \
-            && rm -rf /var/lib/apt/lists/*
-
-        # Upgrade pip
-        RUN python3 -m pip install --upgrade pip
-
-        # Install PyTorch with CUDA 12.1 support
-        RUN pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
-
-        # Install ML dependencies
-        RUN pip3 install \
-            transformers \
-            datasets \
-            unsloth[cu121-torch240] \
-            trl \
-            accelerate \
-            bitsandbytes
+            && rm -rf /var/lib/apt/lists/* \
+            && python3 -m pip install --upgrade pip --no-cache-dir \
+            && pip3 install --no-cache-dir \
+                torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121 \
+            && pip3 install --no-cache-dir \
+                transformers \
+                datasets \
+                unsloth[cu121-torch240] \
+                trl \
+                accelerate \
+                bitsandbytes \
+            && apt-get clean \
+            && rm -rf /tmp/* /var/tmp/*
 
         # Set working directory
         WORKDIR /workspace
